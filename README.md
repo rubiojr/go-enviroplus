@@ -2,6 +2,8 @@
 
 Go library to read data from [Pimoroni's Enviro+](https://learn.pimoroni.com/tutorial/sandyj/getting-started-with-enviro-plus) sensors.
 
+⚠️ Experimental, API subject to change ⚠
+
 ## LTR559
 
 Light/Proximity Sensor.
