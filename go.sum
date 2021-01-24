@@ -1,0 +1,4 @@
+periph.io/x/conn/v3 v3.6.7 h1:hem/gzoUI0tnvdJOJAk+XLBhqBGX9sHkwShBXRGGy0k=
+periph.io/x/conn/v3 v3.6.7/go.mod h1:3OD27w9YVa5DS97VsUxsPGzD9Qrm5Ny7cF5b6xMMIWg=
+periph.io/x/host/v3 v3.6.7 h1:hUVkGKJ235XocQIRiITxSmP8TT8f27oiN7R2dJkomIE=
+periph.io/x/host/v3 v3.6.7/go.mod h1:wO+N7Q6qU1Pp9EXBfyV9t7kPAlvZxYoJl4ptK62qhSY=
