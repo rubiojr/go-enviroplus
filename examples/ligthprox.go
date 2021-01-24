@@ -9,14 +9,19 @@ import (
 )
 
 func main() {
-	d := ltr559.New()
+	d, _ := ltr559.New()
 
-	fmt.Printf("Manufacturer ID:  0x%x\n", d.ManufacturerID())
-	fmt.Printf("Part ID:          0x%x\n", d.PartID())
+	mid, _ := d.ManufacturerID()
+	pid, _ := d.PartID()
+
+	fmt.Printf("Manufacturer ID:  0x%x\n", mid)
+	fmt.Printf("Part ID:          0x%x\n", pid)
 
 	for {
-		fmt.Println("proximity: ", d.Proximity())
-		fmt.Println("      lux: ", d.Lux())
+		prox, _ := d.Proximity()
+		lux, _ := d.Lux()
+		fmt.Println("proximity: ", prox)
+		fmt.Println("      lux: ", lux)
 		time.Sleep(1 * time.Second)
 	}
 }

@@ -46,11 +46,10 @@ type LTR559 struct {
 }
 
 // New create an LTR559 sensor ready for reading light/proximity values.
-func New() *LTR559 {
+func New() (*LTR559, error) {
 	d := &LTR559{}
-	d.init()
 
-	return d
+	return d, d.init()
 }
 
 // Close closes the the i2c bus
@@ -58,15 +57,15 @@ func (s *LTR559) Close() {
 	s.bus.Close()
 }
 
-func (s *LTR559) init() {
+func (s *LTR559) init() error {
 	var err error
 	if _, err = host.Init(); err != nil {
-		panic(err)
+		return err
 	}
 
 	s.bus, err = i2creg.Open("")
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	if _, ok := s.bus.(i2c.Pins); ok {
@@ -105,34 +104,54 @@ func (s *LTR559) init() {
 
 	// ps_offset offset=0
 	s.setRegister(PS_OFFSET, []byte{0x00, 0x00})
+
+	return nil
 }
 
 // Lux returns the ambient light value in lux.
-func (s *LTR559) Lux() float64 {
-	s.updateSensor()
+func (s *LTR559) Lux() (float64, error) {
+	err := s.updateSensor()
+	if err != nil {
+		return 0, err
+	}
 
-	return s.lux
+	return s.lux, nil
 }
 
 // Proximity returns the RAW proximity reading from the sensor.
-func (s *LTR559) Proximity() float64 {
-	s.updateSensor()
+func (s *LTR559) Proximity() (float64, error) {
+	err := s.updateSensor()
+	if err != nil {
+		return 0, err
+	}
 
-	return float64(s.ps0)
+	return float64(s.ps0), nil
 }
 
-func (s *LTR559) updateSensor() {
-	status := s.getRegister(ALS_PS_STATUS, 1)[0]
+func (s *LTR559) updateSensor() error {
+	var err error
+	b, err := s.getRegister(ALS_PS_STATUS, 1)
+	if err != nil {
+		return err
+	}
+	status := b[0]
+
 	ps_int := (status&0x02 != 0x0) || (status&0x04 != 0)
 	als_int := (status&0x08 != 0x0) || (status&0x04 != 0x0)
 
 	if ps_int {
-		res := s.getRegister(PS_DATA, 2)
+		res, err := s.getRegister(PS_DATA, 2)
+		if err != nil {
+			return err
+		}
 		s.ps0 = binary.LittleEndian.Uint16(res)
 	}
 
 	if als_int {
-		s.als = s.getRegister(ALS_DATA, 4)
+		s.als, err = s.getRegister(ALS_DATA, 4)
+		if err != nil {
+			return err
+		}
 		s.als0 = binary.LittleEndian.Uint16(s.als[0:2])
 		s.als1 = binary.LittleEndian.Uint16(s.als[2:])
 
@@ -160,20 +179,25 @@ func (s *LTR559) updateSensor() {
 		lux /= 10000.0
 		s.lux = lux
 	}
+
+	return nil
 }
 
-func (s *LTR559) ManufacturerID() []byte {
+func (s *LTR559) ManufacturerID() ([]byte, error) {
 	return s.getRegister(MANUFACTURER_ID, 1)
 }
 
-func (s *LTR559) PartID() byte {
-	return s.getRegister(PART_ID, 1)[0]
+func (s *LTR559) PartID() (byte, error) {
+	b, err := s.getRegister(PART_ID, 1)
+	if err != nil {
+		return 0, err
+	}
+
+	return b[0], nil
 }
 
-func (s *LTR559) sendData(d []byte) {
-	if err := s.device.Tx(d, nil); err != nil {
-		panic(err)
-	}
+func (s *LTR559) sendData(d []byte) error {
+	return s.device.Tx(d, nil)
 }
 
 func (s *LTR559) setRegister(addr byte, data []byte) {
@@ -184,14 +208,11 @@ func (s *LTR559) setRegister(addr byte, data []byte) {
 	s.sendData(l)
 }
 
-func (s *LTR559) getRegister(addr byte, count int) []byte {
+func (s *LTR559) getRegister(addr byte, count int) ([]byte, error) {
 	read := make([]byte, count)
-	if err := s.device.Tx([]byte{addr}, read); err != nil {
-		panic(err)
-	}
-	//fmt.Printf("0x%x: %b [0x%x]\n", addr, read, read)
+	err := s.device.Tx([]byte{addr}, read)
 
-	return read
+	return read, err
 }
 
 func bitsToBytes(s string) []byte {
