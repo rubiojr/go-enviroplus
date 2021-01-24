@@ -4,7 +4,6 @@ package ltr559
 import (
 	"encoding/binary"
 	"errors"
-	"fmt"
 
 	"periph.io/x/conn/v3/i2c"
 	"periph.io/x/conn/v3/i2c/i2creg"
@@ -66,10 +65,6 @@ func (s *LTR559) init() error {
 	s.bus, err = i2creg.Open("")
 	if err != nil {
 		return err
-	}
-
-	if _, ok := s.bus.(i2c.Pins); ok {
-		fmt.Println("foo")
 	}
 
 	// Dev is a valid conn.Conn.
