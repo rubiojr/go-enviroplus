@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/rubiojr/go-enviroplus/pms5003"
 )
@@ -11,7 +12,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	dev.StartReading(func(r *pms5003.PMS5003) {
+	go func() {
+		dev.StartReading()
+	}()
+	for {
+		r := dev.LastValue()
 		fmt.Println("-------")
 		fmt.Println("PM1.0 ug/m3 (ultrafine):                        ", r.Pm10Std)
 		fmt.Println("PM2.5 ug/m3 (combustion, organic comp, metals): ", r.Pm25Std)
@@ -25,5 +30,6 @@ func main() {
 		fmt.Println("2.5um 1 0.1L air:                               ", r.Particles25um)
 		fmt.Println("5um 1 0.1L air:                                 ", r.Particles50um)
 		fmt.Println("10um 1 0.1L air:                                ", r.Particles100um)
-	})
+		time.Sleep(1 * time.Second)
+	}
 }

@@ -54,6 +54,7 @@ type Device struct {
 	rw                  io.ReadWriteCloser
 	serialPort          string
 	log                 zerolog.Logger
+	lastRead            *PMS5003
 }
 
 // New device with custom options.
@@ -85,7 +86,15 @@ func NewWithOpts(resetPin, enablePin, serialPort string) (*Device, error) {
 	dev.log = zerolog.New(os.Stderr).With().Timestamp().Logger()
 	dev.log = dev.log.Level(zerolog.InfoLevel)
 
+	dev.lastRead = &PMS5003{}
 	return dev, nil
+}
+
+// Return the last value read from the sensor
+//
+// Call StartReading() first to start reading values from the sensor.
+func (dev *Device) LastValue() *PMS5003 {
+	return dev.lastRead
 }
 
 // New device with sane default values for Enviro+ with PMS5003
@@ -100,9 +109,9 @@ func (dev *Device) EnableDebugging() {
 
 // Start reading values from the serial port.
 //
-// Pass an optional callback to receive those values after reading
-// them.
-func (dev *Device) StartReading(cb func(*PMS5003)) error {
+// The call will loop indefinitely and store the values read.
+// Use LastValue() to retrieve the last value read.
+func (dev *Device) StartReading() error {
 	options := serial.OpenOptions{
 		PortName:              dev.serialPort,
 		BaudRate:              9600,
@@ -123,20 +132,16 @@ func (dev *Device) StartReading(cb func(*PMS5003)) error {
 
 	for {
 		dev.log.Print("Attempting to read.")
-		pms, err := dev.readPMS()
+		err := dev.readPMS()
 		if err != nil {
 			dev.log.Printf("readPMS: %v\n", err)
 			dev.reset()
 			continue
 		}
-		dev.log.Printf("pms = %+v\n", pms)
-		if !pms.valid() {
+		dev.log.Printf("pms = %+v\n", dev.lastRead)
+		if !dev.lastRead.valid() {
 			dev.log.Print("pms is not valid. Ignoring...")
 			continue
-		}
-		// callback
-		if cb != nil {
-			cb(pms)
 		}
 	}
 }
@@ -148,21 +153,21 @@ func (p *PMS5003) valid() bool {
 	return true
 }
 
-func (dev *Device) readPMS() (*PMS5003, error) {
+func (dev *Device) readPMS() error {
 	if err := dev.awaitMagic(); err != nil {
 		// Read errors are likely unrecoverable - just quit and restart.
 		dev.log.Error().Err(err).Msgf("awaitMagic: %v", err)
-		return nil, err
+		return err
 	}
 	buf := make([]byte, 30)
 	n, err := io.ReadFull(dev.rw, buf)
 	if err != nil {
 		// Read errors are likely unrecoverable - just quit and restart.
 		dev.log.Error().Err(err).Msgf("readfull: %v", err)
-		return nil, err
+		return err
 	}
 	if n != 30 {
-		return nil, fmt.Errorf("too few bytes read: want %d got %d", 30, n)
+		return fmt.Errorf("too few bytes read: want %d got %d", 30, n)
 	}
 
 	var sum uint16 = uint16(magic1) + uint16(magic2)
@@ -170,15 +175,15 @@ func (dev *Device) readPMS() (*PMS5003, error) {
 		sum += uint16(buf[i])
 	}
 
-	var p PMS5003
 	bufR := bytes.NewReader(buf)
-	binary.Read(bufR, binary.BigEndian, &p)
+	binary.Read(bufR, binary.BigEndian, dev.lastRead)
 
-	if sum != p.Checksum {
+	if sum != dev.lastRead.Checksum {
 		// This error is recoverable
-		return nil, fmt.Errorf("checksum: got %v want %v", sum, p)
+		return fmt.Errorf("checksum: got %v want %v", sum, dev.lastRead)
 	}
-	return &p, nil
+
+	return nil
 }
 
 func (dev *Device) awaitMagic() error {
