@@ -4,7 +4,6 @@
 package mics6814
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -59,11 +58,6 @@ func (dev *Device) StartReading() {
 		if err != nil {
 			dev.log.Error().Err(err)
 		}
-
-		fmt.Println()
-		fmt.Printf("Oxidising: %.2f\n", ox)
-		fmt.Printf("Reducing:  %.2f\n", red)
-		fmt.Printf("NH3:       %.2f\n", nh3)
 
 		dev.lastRead = Readings{
 			Oxidising: ox,
