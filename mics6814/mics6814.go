@@ -54,7 +54,7 @@ func (dev *Device) StartReading() {
 			dev.log.Error().Err(err)
 		}
 
-		nh3, _ := dev.readPin(dev.nh3Pin)
+		nh3, err := dev.readPin(dev.nh3Pin)
 		if err != nil {
 			dev.log.Error().Err(err)
 		}
